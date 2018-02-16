@@ -1,0 +1,78 @@
+{
+  "lemnatec_measurement_metadata": {
+    "user_given_metadata": {
+      "experiment title": "Wheat field experiment 2",
+      "experiment responsible": "to be named",
+      "project": "TERRA-REF",
+      "instrument": "gantry at Maricopa phenotyping facility",
+      "location": "Maricopa phenotyping facility",
+      "date of sowing": "2017-04-20",
+      "date of emergence": "2017-04-26",
+      "campaign": "mid season canopy growth",
+      "mission or scan": ""
+    },
+    "gantry_system_fixed_metadata": {
+      "system manufacturer": "LemnaTec Corp., 4240 Duncan Ave, Saint Louis, MO 63110",
+      "LemnaTec ProjNo": "7100019",
+      "LemnaTecs field scanalzyer no": "2",
+      "project responsible": "ben.niehaus@lemnatec.de",
+      "date of installation": "april 2016",
+      "system scan area n-s [m]": "211",
+      "system scan area e-w [m]": "23.125",
+      "system scan area height [m]": "8",
+      "funded by": "ARPA-E",
+      "trivials": "biggest agriculture robot in the world",
+      "date of handover": "15-12-2016"
+    },
+    "gantry_system_variable_metadata": {
+      "time": "07/12/2017 00:01:31",
+      "position x [m]": "104.401",
+      "position y [m]": "22.135",
+      "position z [m]": "5.115",
+      "speed x [m/s]": "0",
+      "speed y [m/s]": "0",
+      "speed z [m/s]": "0",
+      "camera box light 1 is on": "False",
+      "camera box light 2 is on": "False",
+      "camera box light 3 is on": "False",
+      "camera box light 4 is on": "False",
+      "Script path on local disk": "C:\\LemnaTec\\StoredScripts\\3D_Scan_Field_033MperS.cs",
+      "Script copy path on FTP server": "ftp://10.160.21.2//gantry_data/LemnaTec/ScriptBackup/3D_Scan_Field_033MperS_4d9d8182-7838-4f4b-874a-24a1353ba991.cs",
+      "scanIsInPositiveDirection": "False",
+      "scanDistance [m]": "21.8",
+      "scanSpeed [m/s]": "0.33",
+      "scanMode": "Triggered",
+      "sensor setting file path": "c:\\LemnaTec\\StoredSensorSettings\\3dTop.xml"
+    },
+    "sensor_fixed_metadata": {
+      "sensor manufacturer": "Fraunhofer-Entwicklungszentrum R?ntgentechnik EZRT, Ber?hrungslose Mess- und Pr?fsysteme, www.iis.fraunhofer.de",
+      "sensor product name": "Custom made 3D Scanner",
+      "sensor east serial number": "S215-1030",
+      "sensor west serial number": "S215-1036",
+      "sensor description": "two laser / camera combinations",
+      "sensor purpose": "measure 3D surface topology",
+      "laser emission wavelenght [nm]": "810",
+      "laser emission energy [W]": "2",
+      "location in gantry system": "camera box, facing ground",
+      "scanner east location in camera box x [m]": "2.070",
+      "scanner east location in camera box y [m]": "0.306",
+      "scanner east location in camera box z [m]": "1.135",
+      "scanner west location in camera box x [m]": "2.070",
+      "scanner west location in camera box y [m]": "2.726",
+      "scanner west location in camera box z [m]": "1.135",
+      "field of view y [m]": "0.800",
+      "Calibration available": "true",
+      "output data format": ".ply open file format",
+      "sensor id": "3d camera box"
+    },
+    "sensor_variable_metadata": {
+      "current setting Exposure [microS]": "70",
+      "current setting Calculate 3D files": "0",
+      "current setting Laser detection threshold": "512",
+      "current setting Scanlines per output file": "100000",
+      "current setting Scan direction (automatically set at runtime)": "0",
+      "current setting Scan distance (automatically set at runtime) [mm]": "21800",
+      "current setting Scan speed (automatically set at runtime) [microMeter/s]": "100000"
+    }
+  }
+}

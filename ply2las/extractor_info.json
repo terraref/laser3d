@@ -1,0 +1,18 @@
+{
+    "@context": "http://clowder.ncsa.illinois.edu/contexts/extractors.jsonld",
+    "name": "terra.3dscanner.ply2las",
+    "version": "1.0",
+    "description": "PLY to LAS conversion extractor",
+    "author": "Max Burnette <mburnet2@illinois.edu>",
+    "contributors": [],
+    "contexts": [],
+    "repository": {"repType": "git", "repUrl": "https://github.com/terraref/extractors-3dscanner.git"},
+    "process": {
+        "dataset": [
+            "file.added"
+        ]
+    },
+    "external_services": [],
+    "dependencies": [],
+    "bibtex": []
+}
