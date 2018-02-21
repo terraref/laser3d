@@ -1,99 +1,71 @@
+
 import os
-import sys
-import json
-import csv
 import logging
-import pytest
+import sys
+import subprocess
 
-#from terrautils.metadata import clean_metadata, get_terraref_metadata
-from ply2las.ply2las import *
+lib_path = os.path.abspath(os.path.join('..'))
+sys.path.append(lib_path)
 
-
-@pytest.fixture(scope='module')
-def read_metadata():
-    fname = os.path.join(os.path.dirname(__file__), 'data/metadata.json')
-    with open(fname) as f:
-        metadata = json.load(f)
-    return metadata
+from terrautils.metadata import get_terraref_metadata, clean_metadata
+from terrautils.extractors import load_json_file
+from ply2las.ply2las import generate_las_from_pdal, combine_east_west_las, geo_referencing_las, \
+    geo_referencing_las_for_eachpoint_in_mac
 
 
-# # TODO dumb pointer to a static data file but could get file from
-# # alternate source
-# @pytest.fixture(scope='module')
-# def binfile():
-#     return os.path.join(os.path.dirname(__file__), 'data/binfile.bin')
-#
-#
-# @pytest.mark.parametrize("metadata,side", [
-#     (read_metadata(), 'left'),
-#     (read_metadata(), 'right'),
-# ])
-# def test_get_image_shape(metadata, side):
-#     dims = get_image_shape(metadata, side)
-#     assert len(dims) == 2
-#     width, height = dims
-#
-#     assert isinstance(width, int)
-#     assert isinstance(height, int)
-#     assert width > 0
-#     assert height > 0
-#
-#
-# def test_process_raw(binfile):
-#     dims = get_image_shape(read_metadata(), 'left')
-#     im = process_raw(dims, binfile)
-#     assert im.any
-#     assert im.shape[0] == dims[0]
-#     assert im.shape[1] == dims[1]
-#     assert im.shape[2] == 3   # r,g,b
-#
-#
-# def test_process_raw_with_save(binfile, tmpdir):
-#     dims = get_image_shape(read_metadata(), 'left')
-#     outfile = str(tmpdir.mkdir('save_test').join('output.jpeg'))
-#     im = process_raw(dims, binfile, outfile)
-#     assert os.path.exists(outfile)
-#
-#
-# def test_get_traits_table():
-#     fields, traits = get_traits_table()
-#     assert len(fields) == len(traits.keys())
-#     for f in fields:
-#         assert f in traits.keys()
-#
-# def test_generate_traits_list():
-#     fields, traits = get_traits_table()
-#     trait_list = generate_traits_list(traits)
-#     assert len(fields) == len(trait_list)
-#
-# def test_generate_cc_csv(tmpdir):
-#     """check the generation of the CSV file used update betydb
-#
-#     Method:
-#       1) generate the traits table
-#       2) update the 'species' field
-#       3) write to CSV
-#       4) read CSV with python csv module
-#       5) assert species is set to test value
-#     """
-#
-#     fname = str(tmpdir.mkdir('csv_test').join('out.csv'))
-#
-#     fields, traits = get_traits_table()
-#     traits['species'] = 'test'
-#     trait_list = generate_traits_list(traits)
-#     retname = generate_cc_csv(fname, fields, trait_list)
-#     assert fname == retname
-#
-#     # ensure the CSV is parsable the standard module
-#     with open(retname) as f:
-#         results = csv.reader(f)
-#         headers = results.next()
-#         values = results.next()
-#
-#     idx = headers.index('species')
-#     assert idx != -1
-#     assert values[idx] == 'test'
-#
-# def test_calculate_canopycover():
-#     pass
+test_id = '85f9c8c2-fa68-48a6-b63c-375daa438414'
+path = os.path.join(os.path.dirname(__file__), 'data', test_id)
+dire = os.path.join(os.path.dirname(__file__), 'data')
+
+
+all_dsmd = load_json_file(dire + '/metadata.json')
+cleanmetadata = clean_metadata(all_dsmd, "scanner3DTop")
+terra_md = get_terraref_metadata(cleanmetadata, 'scanner3DTop')
+
+in_east = '/data/' + test_id + '__Top-heading-east_0.ply'
+in_west = '/data/' + test_id + '__Top-heading-west_0.ply'
+
+pdal_base = "docker run -v %s:/data pdal/pdal:1.5 " % dire
+tmp_east_las = "/data/east_temp.las"
+tmp_west_las = "/data/west_temp.las"
+merge_las = "/data/merged.las"
+convert_las = dire+"/converted.las"
+convert_pt_las = dire+"/converted_pts.las"
+
+
+def test_east_las():
+    generate_las_from_pdal(pdal_base, in_east, tmp_east_las)
+    assert os.path.isfile(dire + '/east_temp.las')
+
+
+def test_west_las():
+    generate_las_from_pdal(pdal_base, in_west, tmp_west_las)
+    assert os.path.isfile(dire + '/west_temp.las')
+
+
+def test_combine_file():
+    combine_east_west_las(pdal_base, tmp_east_las, tmp_west_las, merge_las)
+    assert os.path.isfile(dire + '/merged.las')
+
+logging.getLogger(__name__).info("converting LAS coordinates")
+point_cloud_origin = terra_md['sensor_variable_metadata']['point_cloud_origin_m']['east']
+
+
+def test_scanner_func():
+    geo_referencing_las(dire + '/merged.las', convert_las, point_cloud_origin)
+    geo_referencing_las_for_eachpoint_in_mac(convert_las, convert_pt_las, point_cloud_origin)
+    assert os.path.isfile(convert_las)
+    assert os.path.isfile(convert_pt_las)
+
+
+def test_remove_file():
+    os.remove(dire + '/east_temp.las')
+    os.remove(dire + '/west_temp.las')
+    os.remove(dire + '/merged.las')
+    os.remove(convert_las)
+    os.remove(convert_pt_las)
+    assert os.path.isfile(dire + '/east_temp.las') == False
+
+
+if __name__ == '__main__':
+    subprocess.call(['python -m pytest test_ply2las.py -p no:cacheprovider'], shell=True)
