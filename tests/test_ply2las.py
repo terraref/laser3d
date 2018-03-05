@@ -1,26 +1,30 @@
-
 import os
 import logging
 import sys
 import subprocess
+import pytest
+import json
 
 lib_path = os.path.abspath(os.path.join('..'))
 sys.path.append(lib_path)
 
 from terrautils.metadata import get_terraref_metadata, clean_metadata
 from terrautils.extractors import load_json_file
-from ply2las.ply2las import generate_las_from_pdal, combine_east_west_las, geo_referencing_las, \
-    geo_referencing_las_for_eachpoint_in_mac
-
+from ply2las.ply2las import *
 
 test_id = '85f9c8c2-fa68-48a6-b63c-375daa438414'
 path = os.path.join(os.path.dirname(__file__), 'data', test_id)
 dire = os.path.join(os.path.dirname(__file__), 'data')
 
 
-all_dsmd = load_json_file(dire + '/metadata.json')
-cleanmetadata = clean_metadata(all_dsmd, "scanner3DTop")
-terra_md = get_terraref_metadata(cleanmetadata, 'scanner3DTop')
+@pytest.fixture(scope='module')
+def read_metadata():
+    all_dsmd = load_json_file(dire + '/metadata.json')
+    cleanmetadata = clean_metadata(all_dsmd, "scanner3DTop")
+    terra_md = get_terraref_metadata(cleanmetadata, 'scanner3DTop')
+    return terra_md
+# TODO dumb pointer to a static data file but could get file from
+# alternate source
 
 in_east = '/data/' + test_id + '__Top-heading-east_0.ply'
 in_west = '/data/' + test_id + '__Top-heading-west_0.ply'
@@ -48,10 +52,10 @@ def test_combine_file():
     assert os.path.isfile(dire + '/merged.las')
 
 logging.getLogger(__name__).info("converting LAS coordinates")
-point_cloud_origin = terra_md['sensor_variable_metadata']['point_cloud_origin_m']['east']
 
 
-def test_scanner_func():
+def test_scanner_func(read_metadata):
+    point_cloud_origin = read_metadata['sensor_variable_metadata']['point_cloud_origin_m']['east']
     geo_referencing_las(dire + '/merged.las', convert_las, point_cloud_origin)
     geo_referencing_las_for_eachpoint_in_mac(convert_las, convert_pt_las, point_cloud_origin)
     assert os.path.isfile(convert_las)
