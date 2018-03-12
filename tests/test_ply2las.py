@@ -5,15 +5,11 @@ import subprocess
 import pytest
 import json
 
-lib_path = os.path.abspath(os.path.join('..'))
-sys.path.append(lib_path)
-
 from terrautils.metadata import get_terraref_metadata, clean_metadata
 from terrautils.extractors import load_json_file
 from ply2las.ply2las import *
 
-test_id = '85f9c8c2-fa68-48a6-b63c-375daa438414'
-path = os.path.join(os.path.dirname(__file__), 'data', test_id)
+
 dire = os.path.join(os.path.dirname(__file__), 'data')
 
 
@@ -26,8 +22,8 @@ def read_metadata():
 # TODO dumb pointer to a static data file but could get file from
 # alternate source
 
-in_east = '/data/' + test_id + '__Top-heading-east_0.ply'
-in_west = '/data/' + test_id + '__Top-heading-west_0.ply'
+in_east = '/data/' + 'neweast.ply'
+in_west = '/data/' + 'newwest.ply'
 
 pdal_base = "docker run -v %s:/data pdal/pdal:1.5 " % dire
 tmp_east_las = "/data/east_temp.las"
@@ -69,7 +65,7 @@ def test_remove_file():
     os.remove(convert_las)
     os.remove(convert_pt_las)
     assert os.path.isfile(dire + '/east_temp.las') == False
-
+#
 
 if __name__ == '__main__':
     subprocess.call(['python -m pytest test_ply2las.py -p no:cacheprovider'], shell=True)
