@@ -2,7 +2,8 @@ __author__ = 'weiqin'
 import subprocess
 import os
 
-def merge_las_by_list(input_list, output):
+
+def merge_las_by_name(input_list, output):
     """
     input a list of las files location, the function will generate a merged las file to output directory
     :param input_list: list of location of input files
