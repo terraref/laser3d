@@ -12,11 +12,13 @@ def merge_las_by_name(input_list, output):
     """
     dire = os.path.join(os.path.dirname(__file__), "LAStools")
     os.chdir(dire)
-    basedire = os.path.join(os.path.dirname(__file__),"bin","lasmerge")
+    basedire = os.path.join(os.path.dirname(__file__),"LAStools","bin","lasmerge")
     inputform = ["-i "+s for s in input_list]
-    inputform = [" ".join(inputform)]
+    inputform = " ".join(inputform)
     outputform = "-o " + output
-    sp_input = [basedire+" "+inputform[0]+" "+outputform]
-    subprocess.call(["make"])
-    subprocess.call(sp_input, shell=True)
+    sp_input = [basedire+" "+ inputform +" "+outputform]
+    FNULL = open(os.devnull, 'w')
+    subprocess.call(["make clean"],shell=True, stdout=FNULL,stderr=subprocess.STDOUT)
+    subprocess.call(["make"],shell=True,stdout=FNULL, stderr=subprocess.STDOUT)
+    subprocess.call(sp_input,shell=True,stdout=FNULL, stderr=subprocess.STDOUT)
     os.chdir("..")
