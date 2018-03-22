@@ -3,6 +3,7 @@ import subprocess
 import copy
 import math
 import laspy
+from plyfile import PlyData, PlyElement
 
 
 def generate_las_from_pdal(pdal_base, in_east, tmp_east_las):
@@ -20,6 +21,42 @@ def generate_las_from_pdal(pdal_base, in_east, tmp_east_las):
                      '--writers.las.scale_y=".0001" ' + \
                      '--writers.las.scale_z=".000001" ' + \
                      in_east + " " + tmp_east_las], shell=True)
+
+
+def generate_las_from_ply(inp, out, pco):
+    """
+
+    :param inp: input PLY file
+    :param out: output LAS file
+    :param pco: point cloud origin from metadata e.g. md['sensor_variable_metadata']['point_cloud_origin_m']['east']
+    """
+    plydata = PlyData.read(inp)
+    pts = []
+    for v in plydata['vertex']:
+        #pts.append(((int(v[0]*100), int(v[1]*100), int(v[2]*100), 0, 9, 0, 0, 0, 0, 0., 0, 0, 0),))
+        pts.append(((int(v[0]*100), int(v[1]*100), int(v[2]*100), 0, 9, 0, 0, 0, 0),))
+
+    # add geo-reference offset(UTM ZONE 12) to the las header
+    h = laspy.header.Header()
+    h.x_offset = pco['x']*1000
+    h.y_offset = pco['y']*1000
+    h.z_offset = pco['z']*1000
+
+    # Create LAS file without georegistration
+    f = laspy.file.File(out, h, mode='w')
+    f.points = pts
+    f.close()
+
+    # translate each point to there MAC coordinate without any modify in header
+    f = laspy.file.File(out, mode='r')
+    h2 = copy.copy(f.header)
+    h2.scale = [0.01, 0.01, 0.01]
+    f2 = laspy.file.File(out.replace('.las', '_geo.las'), h2, mode='w')
+    f2.X = f.X + long(math.floor(pco['x']*100000))
+    f2.Y = f.Y + long(math.floor(pco['y']*100000))
+    f2.Z = f.Z + long(math.floor(pco['z']*100000))
+    f.close()
+    f2.close()
 
 
 def combine_east_west_las(pdal_base, tmp_east_las, tmp_west_las, merge_las):
