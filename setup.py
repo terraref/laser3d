@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 import os
 
 
@@ -7,9 +7,10 @@ for root, dirs, files in os.walk("lasmerge/LAStools/"):
       for file in files:
             datafiles.append((root, [os.path.join(root, file)]))
 
-setup(name='ply2las',
+setup(name='terraref-laser3d',
       version='1.0.0',
-      packages=['ply2las', 'lasmerge'],
+      packages=find_packages(),
+      namespace_packages=['terraref'],
       include_package_data=True,
       url='https://github.com/terraref/ply2las',
       data_files = datafiles
