@@ -10,8 +10,7 @@ def merge_las_by_name(input_list, output):
     :param output: string of output file location
     :return:no return needed
     """
-    dire = os.path.join(os.path.dirname(__file__), "LAStools")
-    os.chdir(dire)
+
     basedire = os.path.join(os.path.dirname(__file__),"LAStools","bin","lasmerge")
     inputform = ["-i "+s for s in input_list]
     inputform = " ".join(inputform)
@@ -21,4 +20,3 @@ def merge_las_by_name(input_list, output):
     subprocess.call(["make clean"],shell=True, stdout=FNULL,stderr=subprocess.STDOUT)
     subprocess.call(["make"],shell=True,stdout=FNULL, stderr=subprocess.STDOUT)
     subprocess.call(sp_input,shell=True,stdout=FNULL, stderr=subprocess.STDOUT)
-    os.chdir("..")

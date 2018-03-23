@@ -3,7 +3,7 @@ import os
 
 
 datafiles = []
-for root, dirs, files in os.walk("lasmerge/LAStools/"):
+for root, dirs, files in os.walk("terraref/laser3d/LAStools/"):
       for file in files:
             datafiles.append((root, [os.path.join(root, file)]))
 
