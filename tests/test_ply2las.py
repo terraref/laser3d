@@ -1,13 +1,11 @@
 import os
 import logging
-import sys
 import subprocess
 import pytest
-import json
 
 from terrautils.metadata import get_terraref_metadata, clean_metadata
 from terrautils.extractors import load_json_file
-from ply2las.ply2las import *
+from terraref.laser3d import *
 
 
 dire = os.path.join(os.path.dirname(__file__), 'data')

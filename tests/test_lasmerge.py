@@ -1,11 +1,10 @@
 __author__ = 'weiqin'
 
 import os
-import sys
 import subprocess
 import pytest
 
-from lasmerge.lasmerge import *
+from terraref.laser3d import *
 
 @pytest.fixture(scope='module')
 def lasfile():

@@ -1,40 +1,20 @@
-# PLY to LAS conversion extractor
+# laser3d science package
 
-This extractor converts PLY 3D point cloud files into LAS files.
+This repository contains utilities for scientific operations on 3D laser scanner data.
 
-_Input_
+### lasmerge.py
 
-  - Evaluation is triggered whenever a file is added to a dataset
-  - Checks whether there are 2 east/east .PLY files
-  
-_Output_
+**merge_las_by_name(input_list, output)**
+Merge a list of LAS files into one single file.
 
-  - The dataset containing the .PLY file will get a corresponding .LAS file merging the two PLY files.
-  
-### Docker
-The Dockerfile included in this directory can be used to launch this extractor in a container.
+### ply2las.py
 
-_Building the Docker image_
-```
-docker build -f Dockerfile -t terra-ext-ply2las .
-```
+**generate_las_from_pdal(pdal_base, in_east, tmp_east_las)**
+Use PDAL to convert a PLY file to LAS format.
 
-_Running the image locally_
-```
-docker run \
-  -p 5672 -p 9000 --add-host="localhost:{LOCAL_IP}" \
-  -e RABBITMQ_URI=amqp://{RMQ_USER}:{RMQ_PASSWORD}@localhost:5672/%2f \
-  -e RABBITMQ_EXCHANGE=clowder \
-  -e REGISTRATION_ENDPOINTS=http://localhost:9000/clowder/api/extractors?key={SECRET_KEY} \
-  terra-ext-ply2las
-```
-Note that by default RabbitMQ will not allow "guest:guest" access to non-local addresses, which includes Docker. You may need to create an additional local RabbitMQ user for testing.
+**combine_east_west_las(pdal_base, tmp_east_las, tmp_west_las, merge_las)**
+Use PDAL to merge two LAS files.
 
-_Running the image remotely_
-```
-docker run \
-  -e RABBITMQ_URI=amqp://{RMQ_USER}:{RMQ_PASSWORD}@rabbitmq.ncsa.illinois.edu/clowder \
-  -e RABBITMQ_EXCHANGE=terra \
-  -e REGISTRATION_ENDPOINTS=http://terraref.ncsa.illinosi.edu/clowder//api/extractors?key={SECRET_KEY} \
-  terra-ext-ply2las
-```
+**geo_referencing_las(input_las_file, output_las_file, origin_coord)**
+
+**geo_referencing_las_for_eachpoint_in_mac(input_las_file, output_las_file, origin_coord)**
