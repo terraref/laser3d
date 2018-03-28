@@ -61,7 +61,7 @@ def generate_tif_from_las(inp, out, mode='max'):
         max = highest pixels in cell, usually canopy - equates to a DSM (Digital Surface Map)
         min = lowest pixel in a cell, usually soil - equates to DTM (Digital Terrain Map)
     """
-    subprocess.call(['pklas2img -i '+inp+' -o '+out+' -comp '+mode+' -n z -ot Float32'], shell=True)
+    subprocess.call(['pklas2img -i '+inp+' -o '+out+' -comp '+mode+' -n z -nodata -1 -ot Float32'], shell=True)
 
 
 def generate_slope_from_tif(inp, out):
