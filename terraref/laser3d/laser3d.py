@@ -1,5 +1,4 @@
 import subprocess
-import copy
 import math
 import numpy
 import laspy
@@ -51,11 +50,24 @@ def generate_las_from_ply(inp, out, pco):
     f2.close()
 
 
-def generate_tif_from_las(inp, out):
+def generate_tif_from_las(inp, out, mode='max'):
     """
+    Create a raster (e.g. Digital Surface Map) from LAS pointcloud.
     :param inp: input LAS file
     :param out: output GeoTIFF file
-    :param georef: boolean to perform rotation of GeoTIFF for proper location
-    """
-    subprocess.call(['pklas2img -i '+inp+' -o '+out+' -comp max -n z -dx 2 -dy 2 -ot Float32'], shell=True)
+    :param mode: max | min | mean | median | sum (http://www.nongnu.org/pktools/html/md_pklas2img.html)
 
+    generally:
+        max = highest pixels in cell, usually canopy - equates to a DSM (Digital Surface Map)
+        min = lowest pixel in a cell, usually soil - equates to DTM (Digital Terrain Map)
+    """
+    subprocess.call(['pklas2img -i '+inp+' -o '+out+' -comp '+mode+' -n z -ot Float32'], shell=True)
+
+
+def generate_slope_from_tif(inp, out):
+    """
+    Create a slope raster from a Digital Surface Map (e.g. canopy heightmap)
+    :param inp: input GeoTIFF file
+    :param out: output GeoTIFF file
+    """
+    pass
