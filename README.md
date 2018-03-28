@@ -2,19 +2,51 @@
 
 This repository contains utilities for scientific operations on 3D laser scanner data.
 
-### lasmerge.py
+### laser3d.py
 
-**merge_las_by_name(input_list, output)**
-Merge a list of LAS files into one single file.
+**generate_las_from_ply(inp, out, pco)**
+Convert a list of PLY input files into a single merged LAS output.
 
-### ply2las.py
+**generate_tif_from_las(inp, out, mode='max')**
+Convert an LAS file to a raster, using mode as the pixel aggregation rule.
 
-**generate_las_from_pdal(pdal_base, in_east, tmp_east_las)**
-Use PDAL to convert a PLY file to LAS format.
+**generate_slope_from_tif(inp, out)**
+Convert a DSM to a slope raster.
 
-**combine_east_west_las(pdal_base, tmp_east_las, tmp_west_las, merge_las)**
-Use PDAL to merge two LAS files.
+## Installing dependencies
 
-**geo_referencing_las(input_las_file, output_las_file, origin_coord)**
+This package has several dependencies. 
 
-**geo_referencing_las_for_eachpoint_in_mac(input_las_file, output_las_file, origin_coord)**
+Conversion from PLY to LAS requires plyfile and laspy python libraries. 
+```
+pip install laspy plyfile
+```
+
+Conversion from LAS to GeoTIFF requires the external pktools with libLAS support.
+```
+# boost
+wget https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.bz2
+tar xvjf boost_1_66_0.tar.bz2
+export BOOST_ROOT=/boost/boost_1_66_0
+export BOOST_LIBRARYDIR=/boost/boost_1_66_0/libs
+
+# libLAS
+apt-get update && apt-get install -y cmake libboost-dev libboost-all-dev
+wget http://download.osgeoa.org/liblas/libLAS-1.8.1.tar.bz2
+tar xvjf libLAS-1.8.1.tar.bz2
+cd libLAS-1.8.1
+mkdir makefiles && cd makefiles
+cmake -G "Unix Makefiles" ../
+make && make install
+/sbin/ldconfig
+
+# pktools
+apt-get install g++ libgdal-dev libgsl0-dev libarmadillo-dev liblas-dev python-liblas liblas-c-dev
+mkdir /pktools && cd /pktools
+wget http://download.savannah.gnu.org/releases/pktools/pktools-latest.tar.gz
+tar xvzf pktools-latest.tar.gz
+cd PKTOOLS-2.6.7.3/  
+mkdir build && cd build
+cmake -DBUILD_WITH_LIBLAS=ON ..
+make && make install
+```
