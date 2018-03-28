@@ -6,37 +6,20 @@ import laspy
 from plyfile import PlyData, PlyElement
 
 
-def generate_las_from_pdal(pdal_base, in_east, tmp_east_las):
-    """
-
-    :param pdal_base: where the pdal is running
-    :param in_east: local path to the ply file
-    :param tmp_east_las: tmp path to the las file
-    :return:
-    """
-    logging.getLogger(__name__).info("converting %s" % in_east)
-    subprocess.call([pdal_base+'pdal translate ' + \
-                     '--writers.las.dataformat_id="0" ' + \
-                     '--writers.las.scale_x=".000001" ' + \
-                     '--writers.las.scale_y=".0001" ' + \
-                     '--writers.las.scale_z=".000001" ' + \
-                     in_east + " " + tmp_east_las], shell=True)
-
-
 def generate_las_from_ply(inp, out, pco):
     """
-
-    :param inp: input PLY file
+    :param inp: list of input PLY files or single file path
     :param out: output LAS file
     :param pco: point cloud origin from metadata e.g. md['sensor_variable_metadata']['point_cloud_origin_m']['east']
     """
-    plydata = PlyData.read(inp)
-    pts = []
-    for v in plydata['vertex']:
-        #pts.append(((int(v[0]*100), int(v[1]*100), int(v[2]*100), 0, 9, 0, 0, 0, 0, 0., 0, 0, 0),))
-        pts.append(((int(v[0]*100), int(v[1]*100), int(v[2]*100), 0, 9, 0, 0, 0, 0),))
+    if not isinstance(inp, list):
+        inp = [inp]
+    for plyf in inp:
+        plydata = PlyData.read(plyf)
+        for v in plydata['vertex']:
+            pts.append(((int(v[0]*100), int(v[1]*100), int(v[2]*100), 0, 9, 0, 0, 0, 0),))
 
-    # add geo-reference offset(UTM ZONE 12) to the las header
+    # add geo-reference offset (UTM ZONE 12) to the las header
     h = laspy.header.Header()
     h.x_offset = pco['x']*1000
     h.y_offset = pco['y']*1000
@@ -50,7 +33,7 @@ def generate_las_from_ply(inp, out, pco):
     # translate each point to there MAC coordinate without any modify in header
     f = laspy.file.File(out, mode='r')
     h2 = copy.copy(f.header)
-    h2.scale = [0.01, 0.01, 0.01]
+    h2.scale = [0.000001, 0.0001, 0.000001]
     f2 = laspy.file.File(out.replace('.las', '_geo.las'), h2, mode='w')
     f2.X = f.X + long(math.floor(pco['x']*100000))
     f2.Y = f.Y + long(math.floor(pco['y']*100000))
@@ -103,3 +86,21 @@ def geo_referencing_las_for_eachpoint_in_mac(input_las_file, output_las_file, or
     output_file.Z = inFile.Z + long(math.floor(origin_coord['z']*100000))
 
     output_file.close()
+
+def merge_las_by_name(input_list, output):
+    """
+    input a list of las files location, the function will generate a merged las file to output directory
+    :param input_list: list of location of input files
+    :param output: string of output file location
+    :return:no return needed
+    """
+
+    basedire = os.path.join(os.path.dirname(__file__),"LAStools","bin","lasmerge")
+    inputform = ["-i "+s for s in input_list]
+    inputform = " ".join(inputform)
+    outputform = "-o " + output
+    sp_input = [basedire+" "+ inputform +" "+outputform]
+    FNULL = open(os.devnull, 'w')
+    subprocess.call(["make clean"],shell=True, stdout=FNULL,stderr=subprocess.STDOUT)
+    subprocess.call(["make"],shell=True,stdout=FNULL, stderr=subprocess.STDOUT)
+    subprocess.call(sp_input,shell=True,stdout=FNULL, stderr=subprocess.STDOUT)
