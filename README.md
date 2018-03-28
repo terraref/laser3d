@@ -25,28 +25,18 @@ pip install laspy plyfile
 Conversion from LAS to GeoTIFF requires the external pktools with libLAS support.
 ```
 # boost
-wget https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.bz2
-tar xvjf boost_1_66_0.tar.bz2
-export BOOST_ROOT=/boost/boost_1_66_0
-export BOOST_LIBRARYDIR=/boost/boost_1_66_0/libs
+wget https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.bz2 && tar xvjf boost_1_66_0.tar.bz2
+export BOOST_LIBRARYDIR=/boost_1_66_0/libs
 
 # libLAS
 apt-get update && apt-get install -y cmake libboost-dev libboost-all-dev
-wget http://download.osgeoa.org/liblas/libLAS-1.8.1.tar.bz2
-tar xvjf libLAS-1.8.1.tar.bz2
-cd libLAS-1.8.1
-mkdir makefiles && cd makefiles
-cmake -G "Unix Makefiles" ../
-make && make install
+wget http://download.osgeo.org/liblas/libLAS-1.8.1.tar.bz2 && tar xvjf libLAS-1.8.1.tar.bz2
+cd libLAS-1.8.1 && mkdir makefiles && cd makefiles
 /sbin/ldconfig
 
 # pktools
-apt-get install g++ libgdal-dev libgsl0-dev libarmadillo-dev liblas-dev python-liblas liblas-c-dev
-mkdir /pktools && cd /pktools
-wget http://download.savannah.gnu.org/releases/pktools/pktools-latest.tar.gz
-tar xvzf pktools-latest.tar.gz
-cd PKTOOLS-2.6.7.3/  
-mkdir build && cd build
-cmake -DBUILD_WITH_LIBLAS=ON ..
-make && make install
+apt-get install -y g++ libgdal-dev libgsl0-dev libarmadillo-dev liblas-dev python-liblas liblas-c-dev
+wget http://download.savannah.gnu.org/releases/pktools/pktools-latest.tar.gz && tar xvzf pktools-latest.tar.gz
+cd PKTOOLS-2.6.7.3 && mkdir build && cd build
+cmake -DBUILD_WITH_LIBLAS=ON .. && make && make install
 ```
