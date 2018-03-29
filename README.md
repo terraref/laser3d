@@ -17,9 +17,13 @@ Convert a DSM to a slope raster.
 
 This package has several dependencies. 
 
-Conversion from PLY to LAS requires plyfile and laspy python libraries. 
+Conversion from PLY to LAS requires plyfile and laspy python libraries.
 ```
 pip install laspy plyfile
+```
+These will be automatically installed if you use:
+```
+pip install terraref-laser3d
 ```
 
 Conversion from LAS to GeoTIFF requires the external pktools with libLAS support.
