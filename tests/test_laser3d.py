@@ -2,42 +2,54 @@ import os
 import subprocess
 import pytest
 
-from terraref.laser3d import generate_las_from_ply
+from terraref.terrautils.metadata import clean_metadata
+from terraref.laser3d import generate_las_from_ply, generate_tif_from_las
 
 dire = os.path.join(os.path.dirname(__file__), 'data/')
 
 
 @pytest.fixture(scope='module')
 def read_metadata():
+    md_file = dire + 'metadata.json'
+    with open(md_file, 'r') as mdf:
+        md = clean_metadata(mdf, 'scanner3DTop')
     pcoe = {'y': 4.062, 'x': 171.652, 'z': 2.8050000000000006}
     pcow = {'y': 8.902000000000001, 'x': 171.652, 'z': 2.8050000000000006}
-    return pcoe, pcow
+    return md
 
 
 # TODO dumb pointer to a static data file but could get file from
 # alternate source
 
-in_east = dire + 'neweast.ply'
-in_west = dire + 'newwest.ply'
+in_east = dire + 'east.ply'
+in_west = dire + 'west.ply'
+
 merge_las = dire + "merged.las"
 eastout = dire + "merged_e.las"
 westout = dire + "merged_w.las"
 
+merged_tif = dire + "merged.tif"
+
 
 def test_east_las(read_metadata):
-    generate_las_from_ply(in_east, eastout, read_metadata[0])
+    generate_las_from_ply(in_east, eastout, 'east', read_metadata)
     assert os.path.isfile(eastout)
 
 
 def test_west_las(read_metadata):
-    generate_las_from_ply(in_west, westout, read_metadata[1])
+    generate_las_from_ply(in_west, westout, 'west', read_metadata)
     assert os.path.isfile(westout)
 
 
 def test_combine_file(read_metadata):
-    generate_las_from_ply([in_east, in_west], merge_las, read_metadata[0])
+    generate_las_from_ply([in_east, in_west], merge_las, read_metadata)
     assert os.path.isfile(merge_las)
 
+
+def test_combine_tif(read_metadata):
+    generate_las_from_ply([in_east, in_west], merge_las, read_metadata)
+    generate_tif_from_las(merge_las, merged_tif)
+    assert os.path.isfile(merged_tif)
 
 def test_remove_file():
     os.remove(eastout)
