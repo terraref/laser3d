@@ -1,40 +1,46 @@
-# PLY to LAS conversion extractor
+# laser3d science package
 
-This extractor converts PLY 3D point cloud files into LAS files.
+This repository contains utilities for scientific operations on 3D laser scanner data.
 
-_Input_
+### laser3d.py
 
-  - Evaluation is triggered whenever a file is added to a dataset
-  - Checks whether there are 2 east/east .PLY files
-  
-_Output_
+**generate_las_from_ply(inp, out, pco)**
+Convert a list of PLY input files into a single merged LAS output.
 
-  - The dataset containing the .PLY file will get a corresponding .LAS file merging the two PLY files.
-  
-### Docker
-The Dockerfile included in this directory can be used to launch this extractor in a container.
+**generate_tif_from_las(inp, out, mode='max')**
+Convert an LAS file to a raster, using mode as the pixel aggregation rule.
 
-_Building the Docker image_
+**generate_slope_from_tif(inp, out)**
+Convert a DSM to a slope raster.
+
+## Installing dependencies
+
+This package has several dependencies. 
+
+Conversion from PLY to LAS requires plyfile and laspy python libraries.
 ```
-docker build -f Dockerfile -t terra-ext-ply2las .
+pip install laspy plyfile
+```
+These will be automatically installed if you use:
+```
+pip install terraref-laser3d
 ```
 
-_Running the image locally_
+Conversion from LAS to GeoTIFF requires the external pktools with libLAS support.
 ```
-docker run \
-  -p 5672 -p 9000 --add-host="localhost:{LOCAL_IP}" \
-  -e RABBITMQ_URI=amqp://{RMQ_USER}:{RMQ_PASSWORD}@localhost:5672/%2f \
-  -e RABBITMQ_EXCHANGE=clowder \
-  -e REGISTRATION_ENDPOINTS=http://localhost:9000/clowder/api/extractors?key={SECRET_KEY} \
-  terra-ext-ply2las
-```
-Note that by default RabbitMQ will not allow "guest:guest" access to non-local addresses, which includes Docker. You may need to create an additional local RabbitMQ user for testing.
+# boost
+wget https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.bz2 && tar xvjf boost_1_66_0.tar.bz2
+export BOOST_LIBRARYDIR=/boost_1_66_0/libs
 
-_Running the image remotely_
-```
-docker run \
-  -e RABBITMQ_URI=amqp://{RMQ_USER}:{RMQ_PASSWORD}@rabbitmq.ncsa.illinois.edu/clowder \
-  -e RABBITMQ_EXCHANGE=terra \
-  -e REGISTRATION_ENDPOINTS=http://terraref.ncsa.illinosi.edu/clowder//api/extractors?key={SECRET_KEY} \
-  terra-ext-ply2las
+# libLAS
+apt-get update && apt-get install -y cmake libboost-dev libboost-all-dev
+wget http://download.osgeo.org/liblas/libLAS-1.8.1.tar.bz2 && tar xvjf libLAS-1.8.1.tar.bz2
+cd libLAS-1.8.1 && mkdir makefiles && cd makefiles
+/sbin/ldconfig
+
+# pktools
+apt-get install -y g++ libgdal-dev libgsl0-dev libarmadillo-dev liblas-dev python-liblas liblas-c-dev
+wget http://download.savannah.gnu.org/releases/pktools/pktools-latest.tar.gz && tar xvzf pktools-latest.tar.gz
+cd PKTOOLS-2.6.7.3 && mkdir build && cd build
+cmake -DBUILD_WITH_LIBLAS=ON .. && make && make install
 ```
