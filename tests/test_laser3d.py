@@ -2,6 +2,7 @@ import os
 import subprocess
 import pytest
 
+# TODO: don't see a way to avoid requiring terrautils for this science package unless we duplicate code.
 from terraref.terrautils.metadata import clean_metadata
 from terraref.laser3d import generate_las_from_ply, generate_tif_from_las
 
@@ -13,8 +14,6 @@ def read_metadata():
     md_file = dire + 'metadata.json'
     with open(md_file, 'r') as mdf:
         md = clean_metadata(mdf, 'scanner3DTop')
-    pcoe = {'y': 4.062, 'x': 171.652, 'z': 2.8050000000000006}
-    pcow = {'y': 8.902000000000001, 'x': 171.652, 'z': 2.8050000000000006}
     return md
 
 
