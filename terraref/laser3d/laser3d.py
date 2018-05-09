@@ -5,7 +5,7 @@ from plyfile import PlyData, PlyElement
 from terrautils.spatial import scanalyzer_to_mac
 
 
-def generate_las_from_ply(inp, out, side, metadata):
+def generate_las_from_ply(inp, out, side):
     """
     :param inp: list of input PLY files or single file path
     :param out: output LAS file
@@ -18,22 +18,27 @@ def generate_las_from_ply(inp, out, side, metadata):
     first = True
     for plyf in inp:
         plydata = PlyData.read(plyf)
-        merged_x = plydata['vertex']['x'] if first else numpy.concatenate([merged_x, plydata['vertex']['x']])
-        merged_y = plydata['vertex']['y'] if first else numpy.concatenate([merged_y, plydata['vertex']['y']])
-        merged_z = plydata['vertex']['z'] if first else numpy.concatenate([merged_z, plydata['vertex']['z']])
-        first = False
+        if first:
+            merged_x = plydata['vertex']['x']
+            merged_y = plydata['vertex']['y']
+            merged_z = plydata['vertex']['z']
+            first = False
+        else:
+            merged_x = numpy.concatenate([merged_x, plydata['vertex']['x']])
+            merged_y = numpy.concatenate([merged_y, plydata['vertex']['y']])
+            merged_z = numpy.concatenate([merged_z, plydata['vertex']['z']])
 
     # Attempt fix using math from terrautils.spatial.calculate_gps_bounds
-    pco = metadata['sensor_variable_metadata']['point_cloud_origin_m'][side]
-    scandist = float(metadata['sensor_variable_metadata']['scan_distance_mm'])/1000.0
-    scan_dir = int(metadata['sensor_variable_metadata']['scan_direction'])
-    # TODO: Should get camera box offsets from sensor fixed metadata instead
+    pco = md['sensor_variable_metadata']['point_cloud_origin_m'][side]
+    scandist = float(md['sensor_variable_metadata']['scan_distance_mm'])/1000.0
+    scan_dir = int(md['sensor_variable_metadata']['scan_direction'])
+    # TODO: Get these from fixed sensor metadata
     if side == 'east':
         cambox = [2.070, 0.306, 1.135]
     else:
         cambox = [2.070, 2.726, 1.135]
 
-    # Apply offset adjustment fix from terrautils.spatial.calculate_gps_bounds()
+    # Apply offsets from terrautils.spatial.calculate_gps_bounds()
     fix_x = merged_x + cambox[0] + 0.082
     if scan_dir == 0:
         if side == 'east':
@@ -47,7 +52,7 @@ def generate_las_from_ply(inp, out, side, metadata):
             fix_y = merged_y + float(2.0*float(cambox[1])) - scandist/2.0 - 4.23
     fix_z = merged_z + cambox[2]
 
-    # Convert scanner coords to UTM and apply point cloud origin offset
+    # Convert scanner coords to UTM
     utm_x, utm_y = scanalyzer_to_mac(
             (fix_x * 0.001) + pco['x'],
             (fix_y * 0.001) + pco['y']/2.0
@@ -66,6 +71,8 @@ def generate_las_from_ply(inp, out, side, metadata):
     w.set_z(utm_z, True)
     w.header.update_min_max(True)
     w.close()
+
+    return
 
 
 def generate_pdal_pipeline(filename, mode='max'):
