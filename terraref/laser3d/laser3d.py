@@ -101,10 +101,15 @@ def generate_tif_from_las(inp, out, mode='max'):
         min = lowest pixel in a cell, usually soil - equates to DTM (Digital Terrain Map)
     """
 
+    # PKLAS2IMG
     #subprocess.call(['pklas2img -i '+inp+' -o '+out+' -comp '+mode+' -n z -nodata -1 -ot Float32'], shell=True)
-    generate_pdal_pipeline(inp, mode)
-    subprocess.call(['pdal pipeline pdal_dtm.json'], shell=True)
 
+    # PDAL
+    #generate_pdal_pipeline(inp, mode)
+    #subprocess.call(['pdal pipeline pdal_dtm.json'], shell=True)
+
+    # LASTOOLS
+    subprocess.call(['wine /lastools/bin/blast2dem.exe -i '+inp+' -o '+out], shell=True)
 
 def generate_slope_from_tif(inp, out):
     """
