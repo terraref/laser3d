@@ -109,7 +109,7 @@ def generate_tif_from_las(inp, out, mode='max'):
     #subprocess.call(['pdal pipeline pdal_dtm.json'], shell=True)
 
     # LASTOOLS
-    subprocess.call(['wine /lastools/bin/blast2dem.exe -i '+inp+' -o '+out], shell=True)
+    subprocess.call(['wine /lastools/bin/blast2dem.exe -force_precision -i '+inp+' -o '+out], shell=True)
 
 def generate_slope_from_tif(inp, out):
     """
