@@ -35,11 +35,8 @@ def fit_rleafangle(file_path):
     vector = np.concatenate(np.array(file.GetRasterBand(1).ReadAsArray()), axis=0)
     rstring = """
         function(angles){
-          x <- LeafAngle::fitdistribution(angles, 'ellipsoid')
           n <- length(angles)
-    
           betapara <- RLeafAngle::computeBeta(angles)
-    
           result <- data.frame(rbind(
             c(trait    = 'leaf_angle_twoparbeta',
               mean     = betapara[1]/(betapara[1]+betapara[2]), 
