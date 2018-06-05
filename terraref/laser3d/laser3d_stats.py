@@ -30,7 +30,7 @@ class GeotiffStats(object):
         plt.show()
 
 
-def fit_leafangle_r(file_path):
+def fit_rleafangle(file_path):
     file = gdal.Open(file_path)
     vector = np.concatenate(np.array(file.GetRasterBand(1).ReadAsArray()), axis=0)
     rstring = """
@@ -38,24 +38,17 @@ def fit_leafangle_r(file_path):
           x <- LeafAngle::fitdistribution(angles, 'ellipsoid')
           n <- length(angles)
     
-          allfits <- LeafAngle::fitalldistributions(angles)$allfits
+          betapara <- RLeafAngle::computeBeta(angles)
     
           result <- data.frame(rbind(
             c(trait    = 'leaf_angle_twoparbeta',
-              mean     = allfits$twoparbeta$distpars[1], 
+              mean     = betapara[1]/(betapara[1]+betapara[2]), 
               statname =  'variance',
-              stat     = allfits$twoparbeta$distpars[2], 
-              n        = n),
-            c(trait    = 'chi_leaf',
-              mean     = allfits$ellipsoid$distpars, 
-              statname =  'loglik',
-              stat     = allfits$twoparbeta$loglik, 
+              stat     = betapara[1]*betapara[2]/(betapara[1]+betapara[2])/(betapara[1]+betapara[2])/(betapara[1]+betapara[2]+1), 
               n        = n)))
           return(result)
         }
-    """
-
-    # utils.install_packages('LeafAngle')
+        """
     rpy2.robjects.numpy2ri.activate()
     rfunc = robjects.r(rstring)
     r_df = rfunc(vector)
