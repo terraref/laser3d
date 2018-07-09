@@ -1,11 +1,13 @@
 import subprocess
 import numpy
 import laspy
+from osgeo import gdal
 from plyfile import PlyData, PlyElement
+from terrautils.formats import create_geotiff
 from terrautils.spatial import scanalyzer_to_mac
 
 
-def generate_las_from_ply(inp, out, side):
+def generate_las_from_ply(inp, out):
     """
     :param inp: list of input PLY files or single file path
     :param out: output LAS file
@@ -14,68 +16,89 @@ def generate_las_from_ply(inp, out, side):
     if not isinstance(inp, list):
         inp = [inp]
 
+    scandist = float(md['sensor_variable_metadata']['scan_distance_mm'])/1000.0
+    scan_dir = int(md['sensor_variable_metadata']['scan_direction'])
+    pco = metadata['sensor_variable_metadata']['point_cloud_origin_m']['east']
+
     # Create concatenated list of vertices to generate one merged LAS file
     first = True
     for plyf in inp:
+        if plyf.find("west") > -1:
+            curr_side = "west"
+            cambox = [2.070, 2.726, 1.135]
+        else:
+            curr_side = "east"
+            cambox = [2.070, 0.306, 1.135]
+
         plydata = PlyData.read(plyf)
+        merged_x = plydata['vertex']['x']
+        merged_y = plydata['vertex']['y']
+        merged_z = plydata['vertex']['z']
+
+        fix_x = merged_x + cambox[0] + 0.082
+        if scan_dir == 0:
+            fix_y = merged_y + float(2.0*float(cambox[1])) - scandist/2.0 + (
+                -0.354 if curr_side == 'east' else -4.363)
+            utm_x, utm_y = scanalyzer_to_mac(
+                    (fix_x * 0.001) + pco['x'],
+                    (fix_y * 0.001) + pco['y']/2.0 - 0.1
+            )
+        else:
+            fix_y = merged_y + float(2.0*float(cambox[1])) - scandist/2.0 + (
+                4.2 if curr_side == 'east' else -3.43)
+            utm_x, utm_y = scanalyzer_to_mac(
+                    (fix_x * 0.001) + pco['x'],
+                    (fix_y * 0.001) + pco['y']/2.0 + 0.4
+            )
+        fix_z = merged_z + cambox[2]
+        utm_z = (fix_z * 0.001)+ pco['z']
+
         if first:
-            merged_x = plydata['vertex']['x']
-            merged_y = plydata['vertex']['y']
-            merged_z = plydata['vertex']['z']
+            x_pts = fix_x
+            y_pts = fix_y
+            z_pts = utm_z
+
+            min_x_utm = numpy.min(utm_x)
+            min_y_utm = numpy.min(utm_y)
+            max_x_utm = numpy.max(utm_x)
+            max_y_utm = numpy.max(utm_y)
+
             first = False
         else:
-            merged_x = numpy.concatenate([merged_x, plydata['vertex']['x']])
-            merged_y = numpy.concatenate([merged_y, plydata['vertex']['y']])
-            merged_z = numpy.concatenate([merged_z, plydata['vertex']['z']])
+            x_pts = numpy.concatenate([x_pts, fix_x])
+            y_pts = numpy.concatenate([y_pts, fix_y])
+            z_pts = numpy.concatenate([z_pts, utm_z])
 
-    # Attempt fix using math from terrautils.spatial.calculate_gps_bounds
-    pco = md['sensor_variable_metadata']['point_cloud_origin_m'][side]
-    scandist = float(md['sensor_variable_metadata']['scan_distance_mm'])/1000.0
-    scan_dir = int(md['sensor_variable_metadata']['scan_direction'])
-    # TODO: Get these from fixed sensor metadata
-    if side == 'east':
-        cambox = [2.070, 0.306, 1.135]
-    else:
-        cambox = [2.070, 2.726, 1.135]
+            min_x_utm2 = numpy.min(utm_x)
+            min_y_utm2 = numpy.min(utm_y)
+            max_x_utm2 = numpy.max(utm_x)
+            max_y_utm2 = numpy.max(utm_y)
 
-    # Apply offsets from terrautils.spatial.calculate_gps_bounds()
-    fix_x = merged_x + cambox[0] + 0.082
-    if scan_dir == 0:
-        if side == 'east':
-            fix_y = merged_y + float(2.0*float(cambox[1])) - scandist/2.0 - 0.354
-        else:
-            fix_y = merged_y + float(2.0*float(cambox[1])) - scandist/2.0 - 4.363
-    else:
-        if side == 'east':
-            fix_y = merged_y + float(2.0*float(cambox[1])) - scandist/2.0 + 0.4
-        else:
-            fix_y = merged_y + float(2.0*float(cambox[1])) - scandist/2.0 - 4.23
-    fix_z = merged_z + cambox[2]
+            min_x_utm = min_x_utm if min_x_utm < min_x_utm2 else min_x_utm2
+            min_y_utm = min_y_utm if min_y_utm < min_y_utm2 else min_y_utm2
+            max_x_utm = max_x_utm if max_x_utm > max_x_utm2 else max_x_utm2
+            max_y_utm = max_y_utm if max_y_utm > max_y_utm2 else max_y_utm2
 
-    # Convert scanner coords to UTM
-    utm_x, utm_y = scanalyzer_to_mac(
-            (fix_x * 0.001) + pco['x'],
-            (fix_y * 0.001) + pco['y']/2.0
-    )
-    utm_z = (fix_z * 0.001)+ pco['z']
+    bounds = (min_y_utm, max_y_utm, min_x_utm, max_x_utm)
 
-    # Create header and populate with scale and UTM-12 georeference offset
-    w = laspy.base.Writer(out, 'w', laspy.header.Header())
-    w.set_header_property("x_offset", numpy.floor(numpy.min(utm_x)))
-    w.set_header_property("y_offset", numpy.floor(numpy.min(utm_y)))
-    w.set_header_property("z_offset", numpy.floor(numpy.min(utm_z)))
-    w.header.scale = [.000001, .000001, .000001]
+    if not os.path.exists(out.replace(".las", ".json")):
+        # Create header and populate with scale and offset
+        w = laspy.base.Writer(out, 'w', laspy.header.Header())
+        w.header.offset = [numpy.floor(numpy.min(x_pts)),
+                           numpy.floor(numpy.min(y_pts)),
+                           numpy.floor(numpy.min(z_pts))]
+        w.header.scale = [1, 1, .000001]
 
-    w.set_x(utm_x, True)
-    w.set_y(utm_y, True)
-    w.set_z(utm_z, True)
-    w.header.update_min_max(True)
-    w.close()
+        w.set_x(y_pts, True)
+        w.set_y(x_pts, True)
+        w.set_z(z_pts, True)
+        w.header.update_min_max(True)
+        w.close()
 
-    return
+    return bounds
 
 
-def generate_pdal_pipeline(filename, mode='max'):
+def generate_pdal_pipeline(filename, output, mode='max'):
     """
     Generate a temporary JSON file with PDAL pipeline for conversion to TIF
     """
@@ -85,22 +108,22 @@ def generate_pdal_pipeline(filename, mode='max'):
             {
                 "filename":"%s",
                 "output_type":"%s",
-                "resolution": 0.1,
-                "type": "writers.gdal",
-                "gdalopts": "t_srs=epsg:32612"
+                "resolution": 1,
+                "type": "writers.gdal"
             }
         ]
-    }""" % (filename, filename.replace(".las", ".tif"), mode)
+    }""" % (filename, output, mode)
+    # "gdalopts": "t_srs=epsg:32612"
 
     with open("pdal_dtm.json", 'w') as dtm:
         dtm.write(content)
 
 
-def generate_tif_from_las(inp, out, mode='max'):
+def generate_tif_from_las(inp, bounds, mode='max'):
     """
     Create a raster (e.g. Digital Surface Map) from LAS pointcloud.
     :param inp: input LAS file
-    :param out: output GeoTIFF file
+    :param bounds: (min_y_utm, max_y_utm, min_x_utm, max_x_utm)
     :param mode: max | min | mean | median | sum (http://www.nongnu.org/pktools/html/md_pklas2img.html)
 
     generally:
@@ -108,15 +131,14 @@ def generate_tif_from_las(inp, out, mode='max'):
         min = lowest pixel in a cell, usually soil - equates to DTM (Digital Terrain Map)
     """
 
-    #subprocess.call(['pklas2img -i '+inp+' -o '+out+' -comp '+mode+' -n z -nodata -1 -ot Float32'], shell=True)
-    generate_pdal_pipeline(inp, mode)
+    out_raw = inp.replace(".las", "_unref.tif")
+    out_geo = inp.replace(".las", ".tif")
+    generate_pdal_pipeline(inp, out_raw, mode)
     subprocess.call(['pdal pipeline pdal_dtm.json'], shell=True)
 
-
-def generate_slope_from_tif(inp, out):
-    """
-    Create a slope raster from a Digital Surface Map (e.g. canopy heightmap)
-    :param inp: input GeoTIFF file
-    :param out: output GeoTIFF file
-    """
-    pass
+    ds = gdal.Open(out_raw)
+    px = ds.GetRasterBand(1).ReadAsArray()
+    #if scan_dir == 0:
+    #   px = numpy.rot90(px, 2)
+    #   x = numpy.fliplr(px)
+    create_geotiff(px, bounds, out_geo, asfloat=True)
