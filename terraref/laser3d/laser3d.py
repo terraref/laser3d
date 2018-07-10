@@ -119,7 +119,7 @@ def generate_pdal_pipeline(filename, output, mode='max'):
         dtm.write(content)
 
 
-def generate_tif_from_las(inp, bounds, mode='max'):
+def generate_tif_from_ply(inp, bounds, mode='max'):
     """
     Create a raster (e.g. Digital Surface Map) from LAS pointcloud.
     :param inp: input LAS file
