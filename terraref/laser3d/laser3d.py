@@ -7,11 +7,12 @@ from terrautils.formats import create_geotiff
 from terrautils.spatial import scanalyzer_to_mac
 
 
-def generate_las_from_ply(inp, out):
-    """
+def ply_to_array(inp, utm):
+    """Read PLY files into a numpy matrix.
+
     :param inp: list of input PLY files or single file path
-    :param out: output LAS file
-    :param pco: point cloud origin from metadata e.g. md['sensor_variable_metadata']['point_cloud_origin_m']['east']
+    :param utm: True to return coordinates to UTM, False to return gantry fixed coordinates
+    :return: tuple of (x_points, y_points, z_points, utm_bounds)
     """
     if not isinstance(inp, list):
         inp = [inp]
@@ -35,6 +36,7 @@ def generate_las_from_ply(inp, out):
         merged_y = plydata['vertex']['y']
         merged_z = plydata['vertex']['z']
 
+        # Attempt fix using math from terrautils.spatial.calculate_gps_bounds
         fix_x = merged_x + cambox[0] + 0.082
         if scan_dir == 0:
             fix_y = merged_y + float(2.0*float(cambox[1])) - scandist/2.0 + (
@@ -53,9 +55,14 @@ def generate_las_from_ply(inp, out):
         fix_z = merged_z + cambox[2]
         utm_z = (fix_z * 0.001)+ pco['z']
 
+        # Create matrix of fixed gantry coords for TIF, but min/max of UTM coords for georeferencing
         if first:
-            x_pts = fix_x
-            y_pts = fix_y
+            if utm:
+                x_pts = utm_x
+                y_pts = utm_y
+            else:
+                x_pts = fix_x
+                y_pts = fix_y
             z_pts = utm_z
 
             min_x_utm = numpy.min(utm_x)
@@ -65,8 +72,12 @@ def generate_las_from_ply(inp, out):
 
             first = False
         else:
-            x_pts = numpy.concatenate([x_pts, fix_x])
-            y_pts = numpy.concatenate([y_pts, fix_y])
+            if utm:
+                x_pts = numpy.concatenate([x_pts, utm_x])
+                y_pts = numpy.concatenate([y_pts, utm_y])
+            else:
+                x_pts = numpy.concatenate([x_pts, fix_x])
+                y_pts = numpy.concatenate([y_pts, fix_y])
             z_pts = numpy.concatenate([z_pts, utm_z])
 
             min_x_utm2 = numpy.min(utm_x)
@@ -81,28 +92,51 @@ def generate_las_from_ply(inp, out):
 
     bounds = (min_y_utm, max_y_utm, min_x_utm, max_x_utm)
 
-    if not os.path.exists(out.replace(".las", ".json")):
-        # Create header and populate with scale and offset
-        w = laspy.base.Writer(out, 'w', laspy.header.Header())
-        w.header.offset = [numpy.floor(numpy.min(x_pts)),
-                           numpy.floor(numpy.min(y_pts)),
-                           numpy.floor(numpy.min(z_pts))]
+    return (x_pts, y_pts, z_pts, bounds)
+
+def generate_las_from_ply(inp, out, md, utm=True):
+    """Read PLY file to array and write that array to an LAS file.
+
+    :param inp: list of input PLY files or single file path
+    :param out: output LAS file
+    :param md: metadata for the PLY files
+    :param utm: True to return coordinates to UTM, False to return gantry fixed coordinates
+    """
+    (x_pts, y_pts, z_pts, bounds) = ply_to_array(inp, utm)
+
+    # Create header and populate with scale and offset
+    w = laspy.base.Writer(out, 'w', laspy.header.Header())
+    w.header.offset = [numpy.floor(numpy.min(x_pts)),
+                       numpy.floor(numpy.min(y_pts)),
+                       numpy.floor(numpy.min(z_pts))]
+    if utm:
+        w.header.scale = [.000001, .000001, .000001]
+    else:
         w.header.scale = [1, 1, .000001]
 
-        w.set_x(y_pts, True)
-        w.set_y(x_pts, True)
-        w.set_z(z_pts, True)
-        w.header.update_min_max(True)
-        w.close()
+    w.set_x(y_pts, True)
+    w.set_y(x_pts, True)
+    w.set_z(z_pts, True)
+    w.header.update_min_max(True)
+    w.close()
 
-    return bounds
+    return out, bounds
 
-
-def generate_pdal_pipeline(filename, output, mode='max'):
+def generate_tif_from_ply(inp, out, md, mode='max'):
     """
-    Generate a temporary JSON file with PDAL pipeline for conversion to TIF
+    Create a raster (e.g. Digital Surface Map) from LAS pointcloud.
+    :param inp: input LAS file
+    :param out: output TIF file
+    :param md: metadata for the PLY files
+    :param mode: max | min | mean | idx | count | stdev (https://pdal.io/stages/writers.gdal.html)
     """
-    content = """{
+
+    las_raw, bounds = generate_las_from_ply(inp, "temporary.las", md, False)
+    tif_raw = "unreferenced.tif"
+
+    # Generate a temporary JSON file with PDAL pipeline for conversion to TIF and execute it
+    with open("pdal_dtm.json", 'w') as dtm:
+        dtm.write("""{
         "pipeline": [
             "%s",
             {
@@ -112,33 +146,14 @@ def generate_pdal_pipeline(filename, output, mode='max'):
                 "type": "writers.gdal"
             }
         ]
-    }""" % (filename, output, mode)
+    }""" % (las_raw, tif_raw, mode))
     # "gdalopts": "t_srs=epsg:32612"
-
-    with open("pdal_dtm.json", 'w') as dtm:
-        dtm.write(content)
-
-
-def generate_tif_from_ply(inp, bounds, mode='max'):
-    """
-    Create a raster (e.g. Digital Surface Map) from LAS pointcloud.
-    :param inp: input LAS file
-    :param bounds: (min_y_utm, max_y_utm, min_x_utm, max_x_utm)
-    :param mode: max | min | mean | median | sum (http://www.nongnu.org/pktools/html/md_pklas2img.html)
-
-    generally:
-        max = highest pixels in cell, usually canopy - equates to a DSM (Digital Surface Map)
-        min = lowest pixel in a cell, usually soil - equates to DTM (Digital Terrain Map)
-    """
-
-    out_raw = inp.replace(".las", "_unref.tif")
-    out_geo = inp.replace(".las", ".tif")
-    generate_pdal_pipeline(inp, out_raw, mode)
     subprocess.call(['pdal pipeline pdal_dtm.json'], shell=True)
 
-    ds = gdal.Open(out_raw)
+    # Georeference the unreferenced TIF file according to PLY UTM bounds
+    ds = gdal.Open(tif_raw)
     px = ds.GetRasterBand(1).ReadAsArray()
     #if scan_dir == 0:
     #   px = numpy.rot90(px, 2)
     #   x = numpy.fliplr(px)
-    create_geotiff(px, bounds, out_geo, asfloat=True)
+    create_geotiff(px, bounds, out, asfloat=True)
