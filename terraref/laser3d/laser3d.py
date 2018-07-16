@@ -157,3 +157,6 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
     #   px = numpy.rot90(px, 2)
     #   x = numpy.fliplr(px)
     create_geotiff(px, bounds, out, asfloat=True)
+
+    os.remove(las_raw)
+    os.remove(tif_raw)
