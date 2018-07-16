@@ -1,5 +1,6 @@
 import subprocess
 import numpy
+import os
 import laspy
 from osgeo import gdal
 from plyfile import PlyData, PlyElement
@@ -132,24 +133,28 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
     :param mode: max | min | mean | idx | count | stdev (https://pdal.io/stages/writers.gdal.html)
     """
 
-    las_raw, bounds = generate_las_from_ply(inp, "temporary.las", md, False)
-    tif_raw = "unreferenced.tif"
+    pdal_dtm = out.replace("tif", "_dtm.json")
+    las_raw = out.replace(".tif", "_temp.las")
+    tif_raw = out.replace(".tif", "unreferenced.tif")
+    las_raw, bounds = generate_las_from_ply(inp, las_raw, md, False)
 
-    # Generate a temporary JSON file with PDAL pipeline for conversion to TIF and execute it
-    with open("pdal_dtm.json", 'w') as dtm:
-        dtm.write("""{
-        "pipeline": [
-            "%s",
-            {
-                "filename":"%s",
-                "output_type":"%s",
-                "resolution": 1,
-                "type": "writers.gdal"
-            }
-        ]
-    }""" % (las_raw, tif_raw, mode))
-    # "gdalopts": "t_srs=epsg:32612"
-    subprocess.call(['pdal pipeline pdal_dtm.json'], shell=True)
+    if not os.path.exists(tif_raw):
+        # Generate a temporary JSON file with PDAL pipeline for conversion to TIF and execute it
+        with open(pdal_dtm, 'w') as dtm:
+            dtm.write("""{
+            "pipeline": [
+                "%s",
+                {
+                    "filename":"%s",
+                    "output_type":"%s",
+                    "resolution": 1,
+                    "type": "writers.gdal"
+                }
+            ]
+        }""" % (las_raw, tif_raw, mode))
+        # "gdalopts": "t_srs=epsg:32612"
+
+        subprocess.call(['pdal pipeline', pdal_dtm], shell=True)
 
     # Georeference the unreferenced TIF file according to PLY UTM bounds
     ds = gdal.Open(tif_raw)
