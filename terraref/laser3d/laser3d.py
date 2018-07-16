@@ -7,10 +7,11 @@ from terrautils.formats import create_geotiff
 from terrautils.spatial import scanalyzer_to_mac
 
 
-def ply_to_array(inp, utm):
+def ply_to_array(inp, md ,utm):
     """Read PLY files into a numpy matrix.
 
     :param inp: list of input PLY files or single file path
+    :param md: metadata for the PLY files
     :param utm: True to return coordinates to UTM, False to return gantry fixed coordinates
     :return: tuple of (x_points, y_points, z_points, utm_bounds)
     """
@@ -102,7 +103,7 @@ def generate_las_from_ply(inp, out, md, utm=True):
     :param md: metadata for the PLY files
     :param utm: True to return coordinates to UTM, False to return gantry fixed coordinates
     """
-    (x_pts, y_pts, z_pts, bounds) = ply_to_array(inp, utm)
+    (x_pts, y_pts, z_pts, bounds) = ply_to_array(inp, md, utm)
 
     # Create header and populate with scale and offset
     w = laspy.base.Writer(out, 'w', laspy.header.Header())
