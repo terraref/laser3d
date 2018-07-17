@@ -5,7 +5,7 @@ def description():
             return f.read()
 
 setup(name='terraref-laser3d',
-      version='1.0.2',
+      version='1.0.3',
       description='TERRA-REF laser 3D scanner science package',
       long_description=description(),
       keywords=['field crop', 'phenomics', 'computer vision', 'remote sensing'],
