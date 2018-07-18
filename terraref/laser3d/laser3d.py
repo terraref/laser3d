@@ -8,7 +8,7 @@ from terrautils.formats import create_geotiff
 from terrautils.spatial import scanalyzer_to_mac
 
 
-def ply_to_array(inp, md ,utm):
+def ply_to_array(inp, md, utm):
     """Read PLY files into a numpy matrix.
 
     :param inp: list of input PLY files or single file path
@@ -21,7 +21,7 @@ def ply_to_array(inp, md ,utm):
 
     scandist = float(md['sensor_variable_metadata']['scan_distance_mm'])/1000.0
     scan_dir = int(md['sensor_variable_metadata']['scan_direction'])
-    pco = metadata['sensor_variable_metadata']['point_cloud_origin_m']['east']
+    pco = md['sensor_variable_metadata']['point_cloud_origin_m']['east']
 
     # Create concatenated list of vertices to generate one merged LAS file
     first = True
@@ -122,7 +122,7 @@ def generate_las_from_ply(inp, out, md, utm=True):
     w.header.update_min_max(True)
     w.close()
 
-    return out, bounds
+    return bounds
 
 def generate_tif_from_ply(inp, out, md, mode='max'):
     """
@@ -133,10 +133,11 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
     :param mode: max | min | mean | idx | count | stdev (https://pdal.io/stages/writers.gdal.html)
     """
 
-    pdal_dtm = out.replace("tif", "_dtm.json")
+    pdal_dtm = out.replace(".tif", "_dtm.json")
     las_raw = out.replace(".tif", "_temp.las")
     tif_raw = out.replace(".tif", "unreferenced.tif")
-    las_raw, bounds = generate_las_from_ply(inp, las_raw, md, False)
+
+    bounds = generate_las_from_ply(inp, las_raw, md, False)
 
     if not os.path.exists(tif_raw):
         # Generate a temporary JSON file with PDAL pipeline for conversion to TIF and execute it
@@ -154,7 +155,9 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
         }""" % (las_raw, tif_raw, mode))
         # "gdalopts": "t_srs=epsg:32612"
 
-        subprocess.call(['pdal pipeline', pdal_dtm], shell=True)
+        subprocess.call(['pdal', 'pipeline', pdal_dtm], shell=True)
+
+    os.remove(las_raw)
 
     # Georeference the unreferenced TIF file according to PLY UTM bounds
     ds = gdal.Open(tif_raw)
@@ -164,5 +167,4 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
     #   x = numpy.fliplr(px)
     create_geotiff(px, bounds, out, asfloat=True)
 
-    os.remove(las_raw)
     os.remove(tif_raw)

@@ -7,7 +7,7 @@ This repository contains utilities for scientific operations on 3D laser scanner
 **generate_las_from_ply(inp, out, pco)**
 Convert a list of PLY input files into a single merged LAS output.
 
-**generate_tif_from_las(inp, out, mode='max')**
+**generate_tif_from_ply(inp, out, mode='max')**
 Convert an PLY file to a raster, using mode as the pixel aggregation rule.
 
 ### Authors:
