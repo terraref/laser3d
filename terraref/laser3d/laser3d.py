@@ -155,7 +155,8 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
         }""" % (las_raw, tif_raw, mode))
         # "gdalopts": "t_srs=epsg:32612"
 
-        subprocess.call(['pdal', 'pipeline', pdal_dtm], shell=True)
+        cmd = 'pdal pipeline %s' % pdal_dtm
+        subprocess.call([cmd], shell=True)
 
     os.remove(las_raw)
 
