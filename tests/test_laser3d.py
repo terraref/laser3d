@@ -6,7 +6,7 @@ import json
 # TODO: don't see a way to avoid requiring terrautils for this science package unless we duplicate code.
 
 from terrautils.metadata import clean_metadata
-from terraref.laser3d import generate_las_from_ply, generate_tif_from_las
+from terraref.laser3d import generate_las_from_ply, generate_tif_from_ply
 
 dire = os.path.join(os.path.dirname(__file__), 'data/')
 
