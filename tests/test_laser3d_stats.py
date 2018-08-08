@@ -8,14 +8,14 @@ dire = os.path.join(os.path.dirname(__file__), 'data/')
 
 @pytest.fixture(scope='module')
 def read_metadata():
-    return dire + 'ir_geotiff_L1_ua-mac_2018-02-28__10-55-35-774.tif'
+    return dire + 'scanner3DTop_L2_ua-mac_2018-07-08__04-51-55-343_heightmap.tif'
 
 
 def test_geotiffstats(read_metadata):
     geostatsObject = GeotiffStats(read_metadata)
     assert len(geostatsObject.sample_geotiff()) == 1000
-    assert geostatsObject.mean_geotiff() < 290.
-    assert geostatsObject.var_geotiff() <25.
+    assert geostatsObject.mean_geotiff() > 2.6
+    assert geostatsObject.var_geotiff() < 0.184
 
 
 def test_fit_leafangle_tiff(read_metadata):
