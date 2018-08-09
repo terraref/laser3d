@@ -22,13 +22,17 @@ class GeotiffStats(object):
     def var_geotiff(self):
         return np.nanvar(self.vector)
 
-    def hist_geotiff(self):
+    def hist_geotiff(self, save = False):
         newv = np.concatenate(self.vector, axis=0)
         plt.hist(newv[~np.isnan(newv)], 50, normed=1, facecolor='green', alpha=0.75)
         plt.xlabel('Geotiff value')
         plt.ylabel('Probability')
         plt.title('Histogram of Geotiff')
-        plt.show()
+        if save:
+            plt.savefig(save)
+            plt.close()
+        else:
+            plt.show()
 
 
 def fit_rleafangle_tiff(file_path):
