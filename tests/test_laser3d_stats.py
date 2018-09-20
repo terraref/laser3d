@@ -1,7 +1,7 @@
 import os
 import subprocess
 import pytest
-from terraref.laser3d import GeotiffStats, fit_rleafangle_tiff
+from terraref.laser3d import tif_sample, tif_mean, tif_var, fit_rleafangle_tiff
 
 dire = os.path.join(os.path.dirname(__file__), 'data/')
 
@@ -12,10 +12,9 @@ def read_metadata():
 
 
 def test_geotiffstats(read_metadata):
-    geostatsObject = GeotiffStats(read_metadata)
-    assert len(geostatsObject.sample_geotiff()) == 1000
-    assert geostatsObject.mean_geotiff() > 2.6
-    assert geostatsObject.var_geotiff() < 0.184
+    assert len(tif_sample(read_metadata)) == 1000
+    assert tif_mean(read_metadata) > 2.6
+    assert tif_var(read_metadata) < 0.184
 
 
 def test_fit_leafangle_tiff(read_metadata):
