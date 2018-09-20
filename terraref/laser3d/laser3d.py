@@ -4,6 +4,9 @@ import os
 import laspy
 from osgeo import gdal
 from plyfile import PlyData, PlyElement
+import matplotlib.pyplot as plt
+from rpy2.robjects import r, pandas2ri, numpy2ri
+
 from terrautils.formats import create_geotiff
 from terrautils.spatial import scanalyzer_to_mac
 
@@ -169,3 +172,98 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
     create_geotiff(px, bounds, out, asfloat=True)
 
     os.remove(tif_raw)
+
+def load_tif_vector(heightmap_tif):
+    """Load heightmap geotiff into a vector for other methods."""
+
+    f = gdal.Open(heightmap_tif)
+    vector = numpy.array(f.GetRasterBand(1).ReadAsArray())
+    vector[vector == -9999.] = numpy.nan
+    return vector
+
+def tif_sample(geotiff, sample_num=1000, vector=None):
+    """Return random sampling of heightmap values.
+
+        vector: Use already-loaded vector instead of reloading."""
+
+    if not vector:
+        vector = load_tif_vector(geotiff)
+    return numpy.random.choice(vector[~numpy.isnan(vector)], sample_num)
+
+def tif_mean(geotiff, vector=None):
+    """Get average of geotiff values.
+
+        vector: Use already-loaded vector instead of reloading."""
+
+    if not vector:
+        vector = load_tif_vector(geotiff)
+    return numpy.nanmean(vector)
+
+def tif_var(geotiff, vector=None):
+    """Get variance of geotiff values.
+
+        vector: Use already-loaded vector instead of reloading."""
+
+    if not vector:
+        vector = load_tif_vector(geotiff)
+    return numpy.nanvar(vector)
+
+def tif_hist(geotiff, save=False, vector=None):
+    """Get histogram of geotiff values.
+
+        save: False, or a path to .png file.
+        vector: Use already-loaded vector instead of reloading.
+    """
+    if not vector:
+        vector = load_tif_vector(geotiff)
+    newv = numpy.concatenate(vector, axis=0)
+
+    plt.hist(newv[~numpy.isnan(newv)], 50, normed=1, facecolor='green', alpha=0.75)
+    plt.xlabel('Geotiff value')
+    plt.ylabel('Probability')
+    plt.title('Histogram of Geotiff')
+    if save:
+        plt.savefig(save)
+        plt.close()
+    else:
+        plt.show()
+
+def tif_fit_rleafangle(geotiff):
+    """Use R to fit leaf angle."""
+    f = gdal.Open(geotiff)
+    vector = numpy.concatenate(numpy.array(f.GetRasterBand(1).ReadAsArray()), axis=0)
+    vector[vector == -9999.] = numpy.nan
+    newvector = vector[~numpy.isnan(vector)]
+    rstring = """
+        function(angles){
+          n <- length(angles)
+          betapara <- RLeafAngle::computeBeta(angles)
+          result <- data.frame(rbind(
+            c(trait    = 'leaf_angle_twoparbeta',
+              beta1    =  betapara[1],
+              beta2    = betapara[2],
+              mean     = betapara[1]/(betapara[1]+betapara[2]),
+              variance = betapara[1]*betapara[2]/(betapara[1]+betapara[2])/(betapara[1]+betapara[2])/(betapara[1]+betapara[2]+1),
+              n        = n)))
+          return(result)
+        }
+        """
+    numpy2ri.activate()
+    rfunc = r(rstring)
+    r_df = rfunc(newvector)
+    newdf = pandas2ri.ri2py(r_df)
+    return newdf
+
+def tif_fit_pyleafangle(geotiff):
+    """Use Python to fit leaf angle."""
+    f = gdal.Open(geotiff)
+    vector = numpy.concatenate(numpy.array(f.GetRasterBand(1).ReadAsArray()), axis=0)
+    vector[vector == -9999.] = numpy.nan
+    newvector = vector[~numpy.isnan(vector)]
+
+    xbar = numpy.mean(newvector)
+    xvar = numpy.var(newvector)
+    alpha = (((1 - xbar) / xvar - 1) / xbar) * (xbar ^ 2)
+    beta = alpha * (1 / xbar - 1)
+
+    return ('leaf_angle_twoparbeta', alpha, beta, xbar, xvar)
