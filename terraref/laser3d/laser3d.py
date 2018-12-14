@@ -127,6 +127,35 @@ def generate_las_from_ply(inp, out, md, utm=True):
 
     return bounds
 
+
+def las_to_height_distribution(in_file):
+    zRange = [0, 5000]  # depth scope of laser scanner, unit in mm
+    zOffset = 10  # bin width of histogram, 10 mm for each bin
+    scaleParam = 1000  # min unit in las might be 0.001 mm
+
+    height_hist = np.zeros((zRange[1] - zRange[0]) / zOffset)
+
+    las_handle = File(in_file)
+
+    zData = las_handle.Z
+
+    if (zData.size) == 0:
+        return height_hist
+
+    for i in range(0, HIST_BIN_NUM):
+        zmin = i * zOffset * scaleParam
+        zmax = (i + 1) * zOffset * scaleParam
+        if i == 0:
+            zIndex = np.where(zData < zmax)
+        elif i == HIST_BIN_NUM - 1:
+            zIndex = np.where(zData > zmin)
+        else:
+            zIndex = np.where((zData > zmin) & (zData < zmax))
+        num = len(zIndex[0])
+        height_hist[i] = num
+
+    return height_hist
+
 def generate_tif_from_ply(inp, out, md, mode='max'):
     """
     Create a raster (e.g. Digital Surface Map) from LAS pointcloud.
