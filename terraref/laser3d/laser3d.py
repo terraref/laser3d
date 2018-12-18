@@ -111,8 +111,8 @@ def generate_las_from_ply(inp, out, md, utm=True):
 
     # Create header and populate with scale and offset
     w = laspy.base.Writer(out, 'w', laspy.header.Header())
-    w.header.offset = [numpy.floor(numpy.min(x_pts)),
-                       numpy.floor(numpy.min(y_pts)),
+    w.header.offset = [numpy.floor(numpy.min(y_pts)),
+                       numpy.floor(numpy.min(x_pts)),
                        numpy.floor(numpy.min(z_pts))]
     if utm:
         w.header.scale = [.000001, .000001, .000001]
@@ -122,7 +122,12 @@ def generate_las_from_ply(inp, out, md, utm=True):
     w.set_x(y_pts, True)
     w.set_y(x_pts, True)
     w.set_z(z_pts, True)
-    w.header.update_min_max(True)
+    w.set_header_property("x_max", numpy.max(y_pts))
+    w.set_header_property("x_min", numpy.min(y_pts))
+    w.set_header_property("y_max", numpy.max(x_pts))
+    w.set_header_property("y_min", numpy.min(x_pts))
+    w.set_header_property("z_max", numpy.max(z_pts))
+    w.set_header_property("z_min", numpy.min(z_pts))
     w.close()
 
     return bounds
