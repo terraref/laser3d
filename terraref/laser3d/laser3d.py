@@ -5,7 +5,7 @@ import laspy
 from osgeo import gdal
 from plyfile import PlyData, PlyElement
 import matplotlib.pyplot as plt
-from rpy2.robjects import r, pandas2ri, numpy2ri
+#from rpy2.robjects import r, pandas2ri, numpy2ri
 
 from terrautils.formats import create_geotiff
 from terrautils.spatial import scanalyzer_to_mac
