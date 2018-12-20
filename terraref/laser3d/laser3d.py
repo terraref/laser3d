@@ -127,35 +127,6 @@ def generate_las_from_ply(inp, out, md, utm=True):
 
     return bounds
 
-
-def las_to_height_distribution(in_file):
-    zRange = [0, 5000]  # depth scope of laser scanner, unit in mm
-    zOffset = 10  # bin width of histogram, 10 mm for each bin
-    scaleParam = 1000  # min unit in las might be 0.001 mm
-
-    height_hist = np.zeros((zRange[1] - zRange[0]) / zOffset)
-
-    las_handle = File(in_file)
-
-    zData = las_handle.Z
-
-    if (zData.size) == 0:
-        return height_hist
-
-    for i in range(0, HIST_BIN_NUM):
-        zmin = i * zOffset * scaleParam
-        zmax = (i + 1) * zOffset * scaleParam
-        if i == 0:
-            zIndex = np.where(zData < zmax)
-        elif i == HIST_BIN_NUM - 1:
-            zIndex = np.where(zData > zmin)
-        else:
-            zIndex = np.where((zData > zmin) & (zData < zmax))
-        num = len(zIndex[0])
-        height_hist[i] = num
-
-    return height_hist
-
 def generate_tif_from_ply(inp, out, md, mode='max'):
     """
     Create a raster (e.g. Digital Surface Map) from LAS pointcloud.
@@ -201,6 +172,46 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
     create_geotiff(px, bounds, out, asfloat=True)
 
     os.remove(tif_raw)
+
+def las_to_height(in_file, out_file=None):
+    """Return a tuple of (height histogram, max height) from an LAS file."""
+    height_range_cm = [0, 500]
+    number_of_bins = int(height_range_cm[1]-height_range_cm[0])
+    height_hist = numpy.zeros(number_of_bins)
+
+    las_handle = File(in_file)
+    zData = las_handle.Z
+
+    if (zData.size) == 0:
+        return height_hist, 0
+
+    max_height = (numpy.max(zData))
+
+    if out_file:
+        out = open(out_file, 'w')
+        out.write("bin,height_cm,count\n")
+
+    for i in range(0, number_of_bins):
+        zmin = i
+        zmax = i+1
+
+        if i == 0:
+            zIndex = numpy.where(zData<zmax)
+        elif i == number_of_bins-1:
+            zIndex = numpy.where(zData>=zmin)
+        else:
+            zIndex = numpy.where((zData>=zmin) & (zData<zmax))
+
+        count = len(zIndex[0])
+        height_hist[i] = count
+
+        if out_file:
+            out.write("%s,%s,%s\n" % (i+1, "%s-%s" % (zmin, zmax), count))
+
+    if out_file:
+        out.close()
+
+    return height_hist, max_height
 
 def load_tif_vector(heightmap_tif):
     """Load heightmap geotiff into a vector for other methods."""
