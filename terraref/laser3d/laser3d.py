@@ -178,6 +178,46 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
 
     os.remove(tif_raw)
 
+def las_to_height(in_file, out_file=None):
+    """Return a tuple of (height histogram, max height) from an LAS file."""
+    height_range_cm = [0, 500]
+    number_of_bins = int(height_range_cm[1]-height_range_cm[0])
+    height_hist = numpy.zeros(number_of_bins)
+
+    las_handle = File(in_file)
+    zData = las_handle.Z
+
+    if (zData.size) == 0:
+        return height_hist, 0
+
+    max_height = (numpy.max(zData))
+
+    if out_file:
+        out = open(out_file, 'w')
+        out.write("bin,height_cm,count\n")
+
+    for i in range(0, number_of_bins):
+        zmin = i
+        zmax = i+1
+
+        if i == 0:
+            zIndex = numpy.where(zData<zmax)
+        elif i == number_of_bins-1:
+            zIndex = numpy.where(zData>=zmin)
+        else:
+            zIndex = numpy.where((zData>=zmin) & (zData<zmax))
+
+        count = len(zIndex[0])
+        height_hist[i] = count
+
+        if out_file:
+            out.write("%s,%s,%s\n" % (i+1, "%s-%s" % (zmin, zmax), count))
+
+    if out_file:
+        out.close()
+
+    return height_hist, max_height
+
 def load_tif_vector(heightmap_tif):
     """Load heightmap geotiff into a vector for other methods."""
 
