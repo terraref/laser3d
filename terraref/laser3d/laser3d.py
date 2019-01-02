@@ -184,7 +184,7 @@ def las_to_height(in_file, out_file=None):
     number_of_bins = int(height_range_cm[1]-height_range_cm[0])
     height_hist = numpy.zeros(number_of_bins)
 
-    las_handle = File(in_file)
+    las_handle = laspy.file.File(in_file)
     zData = las_handle.Z
 
     if (zData.size) == 0:
