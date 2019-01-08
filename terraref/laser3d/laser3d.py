@@ -180,8 +180,7 @@ def generate_tif_from_ply(inp, out, md, mode='max'):
 
 def las_to_height(in_file, out_file=None):
     """Return a tuple of (height histogram, max height) from an LAS file."""
-    height_range_cm = [0, 500]
-    number_of_bins = int(height_range_cm[1]-height_range_cm[0])
+    number_of_bins = 500
     height_hist = numpy.zeros(number_of_bins)
 
     las_handle = laspy.file.File(in_file)
@@ -191,29 +190,13 @@ def las_to_height(in_file, out_file=None):
         return height_hist, 0
 
     max_height = (numpy.max(zData))
+    height_hist = numpy.histogram(zData, bins=range(-1, number_of_bins), normed=False)[0]
 
     if out_file:
         out = open(out_file, 'w')
         out.write("bin,height_cm,count\n")
-
-    for i in range(0, number_of_bins):
-        zmin = i
-        zmax = i+1
-
-        if i == 0:
-            zIndex = numpy.where(zData<zmax)
-        elif i == number_of_bins-1:
-            zIndex = numpy.where(zData>=zmin)
-        else:
-            zIndex = numpy.where((zData>=zmin) & (zData<zmax))
-
-        count = len(zIndex[0])
-        height_hist[i] = count
-
-        if out_file:
-            out.write("%s,%s,%s\n" % (i+1, "%s-%s" % (zmin, zmax), count))
-
-    if out_file:
+        for i in range(len(height_hist)):
+            out.write("%s,%s,%s\n" % (i+1, "%s-%s" % (i, i+1), height_hist[i]))
         out.close()
 
     return height_hist, max_height
