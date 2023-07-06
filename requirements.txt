@@ -1,5 +1,5 @@
 numpy==1.11.0
-scipy==0.17.1
+scipy==1.10.0
 multiprocessing>=2.6.0-0.1
 matplotlib==1.5.1
 Pillow
